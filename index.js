@@ -14,7 +14,7 @@ app.get('/', (req, res) => {
 app.post('/install', async (req, res) => {
   const { auth } = req.body;
 
-  if (!auth  !auth.access_token  !auth.domain) {
+  if (!auth || !auth.access_token || !auth.domain) {
     console.log('Ошибка: нет auth данных');
     return res.status(400).send('Ошибка установки');
   }
