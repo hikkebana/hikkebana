@@ -11,7 +11,7 @@ app.get('/', (req, res) => {
 });
 
 // Установка приложения
-app.post('/install', async (req, res) => {
+app.get('/install', async (req, res) => {
   const code = req.query.code;
 
   if (!code) {
