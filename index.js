@@ -1,57 +1,53 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const axios = require('axios');
-const qs = require('querystring');
 const app = express();
-app.use(bodyParser.json());
 
-const CLIENT_ID = 'ТВОЙ_CLIENT_ID';
-const CLIENT_SECRET = 'ТВОЙ_CLIENT_SECRET';
-const BASE_URL = 'https://your-app.onrender.com'; // ← замени позже
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Установка приложения (OAuth)
-app.get('/install', (req, res) => {
-  const redirect = https://oauth.bitrix.info/oauth/authorize/?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${BASE_URL}/oauth;
-  res.redirect(redirect);
+// Главная проверка
+app.get('/', (req, res) => {
+  res.send('B24 Webhook app is running.');
 });
 
-// Обработка OAuth
-app.get('/oauth', async (req, res) => {
-  const code = req.query.code;
+// Установка приложения
+app.post('/install', async (req, res) => {
+  const { auth } = req.body;
+
+  if (!auth  !auth.access_token  !auth.domain) {
+    console.log('Ошибка: нет auth данных');
+    return res.status(400).send('Ошибка установки');
+  }
+
+  console.log('▶ Установка приложения с портала:', auth.domain);
+  console.log('▶ Токен:', auth.access_token);
+
+  // Подписка на событие входящего сообщения в открытой линии
   try {
-    const tokenResponse = await axios.post(
-      'https://oauth.bitrix.info/oauth/token/',
-      qs.stringify({
-        grant_type: 'authorization_code',
-        client_id: CLIENT_ID,
-        client_secret: CLIENT_SECRET,
-        code,
-        redirect_uri: ${BASE_URL}/oauth
-      })
-    );
-
-    const { access_token, domain } = tokenResponse.data;
-
-    // Подписываемся на событие
-    await axios.post(`https://${domain}/rest/event.bind.json`, {
-      event: 'OnImOpenLineMessageAdd',
-      handler: ${BASE_URL}/hook
-    }, {
-      headers: { Authorization: Bearer ${access_token} }
+    const result = await axios.post(`https://${auth.domain}/rest/event.bind`, null, {
+      params: {
+        event: 'OnImOpenLineMessageAdd',
+        handler: 'https://hikkebana.onrender.com/hook',
+        auth: auth.access_token
+      }
     });
 
-    res.send(`✅ Приложение установлено для портала ${domain}`);
+    console.log('✅ Подписка успешно создана:', result.data);
   } catch (err) {
-    console.error(err.response?.data || err);
-    res.status(500).send('Ошибка установки');
+    console.error('❌ Ошибка подписки:', err.response?.data || err.message);
   }
+
+  res.status(200).send('Приложение установлено');
 });
 
-// Обработка событий
+// Обработка события входящего сообщения
 app.post('/hook', (req, res) => {
-  console.log('📥 Событие от Битрикс24:', JSON.stringify(req.body, null, 2));
-  res.sendStatus(200);
+  console.log('📨 Новое сообщение из открытой линии:');
+  console.dir(req.body, { depth: null });
+  res.status(200).send('ok');
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Сервер слушает порт ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Сервер запущен на порту ${PORT}`);
+});
